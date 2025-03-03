@@ -1,9 +1,9 @@
 {
-    "name": "redound/phalcon-api",
+    "name": "cjaybayno/phalcon-api",
     "description": "Phalcon API Library",
     "version": "5.0.0",
     "require": {
-        "php": ">=8.0",
+        "php": "^8.3",
         "ext-phalcon": ">=5.0.0"
     },
     "suggest": {
@@ -13,6 +13,10 @@
         {
             "name": "Bart Blok",
             "email": "bart@wittig.nl"
+        },
+        {
+            "name": "Christian Jay Bayno",
+            "email": "christianjaybayno@gmail.com"
         }
     ],
     "autoload": {
