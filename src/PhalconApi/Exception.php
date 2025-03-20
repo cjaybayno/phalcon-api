@@ -4,8 +4,8 @@ namespace PhalconApi;
 
 class Exception extends \Exception
 {
-    protected string $developerInfo;
-    protected string $userInfo;
+    protected ?string $developerInfo;
+    protected ?array $userInfo;
 
     public function __construct($code, $message = "", $developerInfo = null, $userInfo = null)
     {
