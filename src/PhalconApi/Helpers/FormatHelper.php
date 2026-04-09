@@ -33,7 +33,7 @@ class FormatHelper
      */
     public function double($value)
     {
-        return $value !== null ? (double)$value : null;
+        return $value !== null ? (float)$value : null;
     }
 
     /**
