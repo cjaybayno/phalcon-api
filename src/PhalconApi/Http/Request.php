@@ -14,7 +14,7 @@ class Request extends \Phalcon\Http\Request
      *
      * @return static
      */
-    public function postedDataMethod($method)
+    public function postedDataMethod($method): static
     {
         $this->postedDataMethod = $method;
         return $this;
@@ -25,7 +25,7 @@ class Request extends \Phalcon\Http\Request
      *
      * @return static
      */
-    public function expectsPostData()
+    public function expectsPostData(): static
     {
         $this->postedDataMethod(PostedDataMethods::POST);
         return $this;
@@ -36,7 +36,7 @@ class Request extends \Phalcon\Http\Request
      *
      * @return static
      */
-    public function expectsPutData()
+    public function expectsPutData(): static
     {
         $this->postedDataMethod(PostedDataMethods::PUT);
         return $this;
@@ -47,7 +47,7 @@ class Request extends \Phalcon\Http\Request
      *
      * @return static
      */
-    public function expectsGetData()
+    public function expectsGetData(): static
     {
         $this->postedDataMethod(PostedDataMethods::GET);
         return $this;
@@ -58,7 +58,7 @@ class Request extends \Phalcon\Http\Request
      *
      * @return static
      */
-    public function expectsJsonData()
+    public function expectsJsonData(): static
     {
         $this->postedDataMethod(PostedDataMethods::JSON_BODY);
         return $this;
