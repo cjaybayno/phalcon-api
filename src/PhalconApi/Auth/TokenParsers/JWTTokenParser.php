@@ -19,10 +19,6 @@ class JWTTokenParser implements \PhalconApi\Auth\TokenParserInterface
 
     public function __construct($secret, $algorithm = self::ALGORITHM_HS256)
     {
-        if (!class_exists('\Firebase\JWT\JWT')) {
-            throw new Exception(ErrorCodes::GENERAL_SYSTEM, 'JWT class is needed for the JWT token parser');
-        }
-
         $this->algorithm = $algorithm;
         $this->secret = $secret;
     }
@@ -100,7 +96,15 @@ class JWTTokenParser implements \PhalconApi\Auth\TokenParserInterface
 
     public function encode($token)
     {
-        return \Firebase\JWT\JWT::encode($token, $this->secret, $this->algorithm);
+        $header = ['typ' => 'JWT', 'alg' => $this->algorithm];
+
+        $headerEncoded = $this->base64UrlEncode(json_encode($header));
+        $payloadEncoded = $this->base64UrlEncode(json_encode($token));
+
+        $signature = $this->sign("$headerEncoded.$payloadEncoded", $this->secret, $this->algorithm);
+        $signatureEncoded = $this->base64UrlEncode($signature);
+
+        return "$headerEncoded.$payloadEncoded.$signatureEncoded";
     }
 
     public function getSession($token)
@@ -112,6 +116,85 @@ class JWTTokenParser implements \PhalconApi\Auth\TokenParserInterface
 
     public function decode($token)
     {
-        return \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($this->secret, $this->algorithm));
+        $segments = explode('.', $token);
+
+        if (count($segments) !== 3) {
+            throw new Exception(ErrorCodes::AUTH_TOKEN_INVALID, 'Wrong number of segments');
+        }
+
+        [$headerEncoded, $payloadEncoded, $signatureEncoded] = $segments;
+
+        $headerJson = $this->base64UrlDecode($headerEncoded);
+        $payloadJson = $this->base64UrlDecode($payloadEncoded);
+        $signature = $this->base64UrlDecode($signatureEncoded);
+
+        $header = json_decode($headerJson);
+        $payload = json_decode($payloadJson);
+
+        if ($header === null || $payload === null) {
+            throw new Exception(ErrorCodes::AUTH_TOKEN_INVALID, 'Invalid encoding');
+        }
+
+        if (empty($header->alg) || $header->alg !== $this->algorithm) {
+            throw new Exception(ErrorCodes::AUTH_TOKEN_INVALID, 'Algorithm not supported');
+        }
+
+        if (!$this->verify("$headerEncoded.$payloadEncoded", $signature, $this->secret, $this->algorithm)) {
+            throw new Exception(ErrorCodes::AUTH_TOKEN_INVALID, 'Signature verification failed');
+        }
+
+        return $payload;
+    }
+
+    protected function sign($msg, $key, $alg)
+    {
+        switch ($alg) {
+            case self::ALGORITHM_HS256:
+                return hash_hmac('sha256', $msg, $key, true);
+            case self::ALGORITHM_HS384:
+                return hash_hmac('sha384', $msg, $key, true);
+            case self::ALGORITHM_HS512:
+                return hash_hmac('sha512', $msg, $key, true);
+            case self::ALGORITHM_RS256:
+                $signature = '';
+                $success = openssl_sign($msg, $signature, $key, OPENSSL_ALGO_SHA256);
+                if (!$success) {
+                    throw new Exception(ErrorCodes::GENERAL_SYSTEM, 'OpenSSL unable to sign data');
+                }
+                return $signature;
+            default:
+                throw new Exception(ErrorCodes::GENERAL_SYSTEM, 'Algorithm not supported');
+        }
+    }
+
+    protected function verify($msg, $signature, $key, $alg)
+    {
+        switch ($alg) {
+            case self::ALGORITHM_HS256:
+                return hash_equals(hash_hmac('sha256', $msg, $key, true), $signature);
+            case self::ALGORITHM_HS384:
+                return hash_equals(hash_hmac('sha384', $msg, $key, true), $signature);
+            case self::ALGORITHM_HS512:
+                return hash_equals(hash_hmac('sha512', $msg, $key, true), $signature);
+            case self::ALGORITHM_RS256:
+                return openssl_verify($msg, $signature, $key, OPENSSL_ALGO_SHA256) === 1;
+            default:
+                throw new Exception(ErrorCodes::GENERAL_SYSTEM, 'Algorithm not supported');
+        }
+    }
+
+    protected function base64UrlEncode($data)
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    protected function base64UrlDecode($data)
+    {
+        $remainder = strlen($data) % 4;
+        if ($remainder) {
+            $data .= str_repeat('=', 4 - $remainder);
+        }
+
+        return base64_decode(strtr($data, '-_', '+/'));
     }
 }
